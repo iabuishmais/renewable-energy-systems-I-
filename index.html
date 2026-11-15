@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#122b47">
+<title>PV MPPT Lecture Simulator | Ibrahim Abuishmais, PhD</title>
+<style>
+  :root {
+    color-scheme:light;
+    --bg:#f1f5fb;--surface:#fff;--chart:#fafcff;--text:#15283f;--muted:#56708a;
+    --header:#112d4b;--header-muted:#c6d9ec;--border:#d4e0ec;--grid:#e6edf5;
+    --primary:#126da8;--primary-strong:#0c5f98;--accent:#f19a27;--global:#168d65;
+    --local:#ac62c4;--info:#edf6fd;--info-border:#1684bc;--readings:#eff7fd;
+    --axis:#a6b8ca;--shadow:0 4px 14px rgba(16,44,70,.03);--warning:#a45d16;
+    --btn-bg:#fff;--btn-border:#9bb8d1;--trace:rgba(237,146,44,.40);
+  }
+  html[data-theme="dark"] {
+    color-scheme:dark;
+    --bg:#0b1624;--surface:#142438;--chart:#102035;--text:#e5eff9;--muted:#a0b6cc;
+    --header:#071321;--header-muted:#a8c0d8;--border:#2c435a;--grid:#294055;
+    --primary:#65bdf3;--primary-strong:#1e719e;--accent:#f4a444;--global:#58d6a5;
+    --local:#d99af0;--info:#193550;--info-border:#5ab2ea;--readings:#1b344c;
+    --axis:#637e97;--shadow:none;--warning:#f5b868;
+    --btn-bg:#1b3046;--btn-border:#4e708e;--trace:rgba(248,166,65,.50);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  button,input,select{font:inherit}
+  button,select{border:1px solid var(--btn-border);background:var(--btn-bg);border-radius:9px;padding:10px 13px;font-weight:650;color:var(--text);cursor:pointer;min-height:44px}
+  button:hover{filter:brightness(.96)}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+  button.primary{background:var(--primary-strong);color:#fff;border-color:var(--primary-strong)}
+  button.secondary{background:var(--info);border-color:var(--border)}
+  button:disabled{cursor:not-allowed;opacity:.45}
+  button .symbol{font-size:18px;vertical-align:-1px;margin-right:4px}
+  header{background:var(--header);color:#fff;padding:18px max(18px,calc((100% - 1510px)/2 + 18px))}
+  .heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+  h1{font-size:clamp(20px,2vw,27px);line-height:1.2;margin:0 0 5px;font-weight:750}
+  header p{margin:0;color:var(--header-muted);font-size:13px}
+  .header-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .byline{text-align:right;font-weight:650;font-size:13px;line-height:1.35;color:#f7fbff;max-width:210px}
+  .theme-toggle{background:#193d5c;color:#fff;border-color:#64819c;white-space:nowrap}
+  .wrap{max-width:1510px;margin:0 auto;padding:16px}
+  .controls,.panel,.metric{background:var(--surface);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow)}
+  .controls{padding:16px;display:flex;flex-wrap:wrap;gap:14px 17px;margin-bottom:14px;align-items:flex-end}
+  .button-group{display:flex;gap:8px;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:140px;font-weight:650;font-size:12px;color:var(--muted)}
+  .field .field-value{color:var(--text);font-weight:750;font-size:13px}
+  .field select{min-width:190px;max-width:280px;font-size:13px}
+  .field input[type="range"]{width:165px;max-width:100%;margin:10px 0;accent-color:var(--primary-strong);cursor:pointer}
+  .field.wide{min-width:190px}
+  .shade-settings{display:flex;gap:12px;flex-wrap:wrap;align-items:end;width:100%;padding:12px;border:1px dashed var(--border);border-radius:10px;background:var(--chart)}
+  .shade-settings[hidden]{display:none}
+  .shade-tip{font-size:12px;color:var(--muted);max-width:450px;line-height:1.5;align-self:center}
+  .metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .metric{padding:12px;min-width:0}
+  .metric span{display:block;color:var(--muted);font-size:12px}
+  .metric b{display:block;font-size:clamp(18px,1.9vw,24px);color:var(--primary);line-height:1.4;font-variant-numeric:tabular-nums}
+  .grid-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .panel{padding:15px;min-width:0}
+  h2{font-size:17px;line-height:1.35;margin:0 0 10px}
+  .chart{display:block;width:100%;height:310px;background:var(--chart);border:1px solid var(--border);border-radius:9px}
+  #pwm{height:176px}
+  .legend{display:flex;flex-wrap:wrap;gap:7px 15px;margin:10px 0 0;color:var(--muted);font-size:12px;align-items:center}
+  .legend-item{white-space:nowrap}
+  .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+  .swatch.curve{background:var(--primary)}.swatch.global{background:var(--global)}.swatch.local{background:var(--local)}.swatch.operating{background:var(--accent)}
+  .info{background:var(--info);border-left:4px solid var(--info-border);padding:12px;border-radius:2px 8px 8px 2px;min-height:94px;line-height:1.65}
+  .info .status{font-weight:750;color:var(--primary)}.info .warning{color:var(--warning);font-weight:750}
+  .formula{font-family:Georgia,"Times New Roman",serif;font-size:16px;line-height:1.7;margin:12px 0}
+  #conductance{font-size:14px}
+  .foot{color:var(--muted);font-size:12px;line-height:1.55}
+  .battery-readings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+  .battery-readings>div{background:var(--readings);border:1px solid var(--border);border-radius:9px;padding:11px;min-width:0}
+  .battery-readings small{display:block;color:var(--muted);font-size:12px}
+  .battery-readings strong{display:block;color:var(--primary);font-size:19px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .peak-summary{margin-top:10px;padding:10px 12px;background:var(--readings);border:1px solid var(--border);border-radius:9px;font-size:13px;line-height:1.6}
+  .peak-summary strong{color:var(--global)}
+  .peak-summary .secondary-peak{color:var(--local);font-weight:750}
+  .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:18px;margin-bottom:8px}
+  .history-head h3{margin:0;font-size:15px}.history-head span{font-size:12px;color:var(--muted)}
+  .table-scroll{overflow-x:auto;max-width:100%;border:1px solid var(--border);border-radius:9px}
+  table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th,td{text-align:right;padding:8px 7px;border-bottom:1px solid var(--border)}
+  th{background:var(--readings);color:var(--muted);font-weight:750}
+  tr:last-child td{border-bottom:0}
+  th:last-child,td:last-child{text-align:left;white-space:normal;min-width:96px}
+  .empty-row{text-align:center!important;color:var(--muted);padding:14px}
+  .action-down{color:var(--global);font-weight:750}.action-up{color:var(--accent);font-weight:750}.action-hold{color:var(--muted)}
+  .fineprint{margin:13px 2px 0;color:var(--muted);font-size:12px;line-height:1.7}
+  .screen-reader-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  @media (max-width:1120px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.controls{gap:12px}}
+  @media (max-width:880px){.grid-layout{grid-template-columns:1fr}.chart{height:300px}.header-right{gap:7px}}
+  @media (max-width:580px){
+    header{padding:15px}.heading{flex-direction:column;gap:13px}.header-right{width:100%;justify-content:space-between;flex-direction:row-reverse}
+    .byline{text-align:left;font-size:12px;max-width:none}
+    .wrap{padding:10px}.controls,.panel{padding:12px}.controls{gap:10px}
+    .button-group{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.button-group button{padding:8px}
+    .field{flex:1 1 calc(50% - 10px);min-width:0}.field.wide{flex-basis:100%}.field select{width:100%;max-width:none;min-width:0}
+    .field input[type="range"]{width:100%;min-width:0}
+    .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:10px}.metric span{font-size:11px}.metric b{font-size:19px}
+    .chart{height:265px}#pwm{height:155px}.battery-readings{grid-template-columns:1fr}
+    .shade-settings{flex-direction:column;align-items:stretch}.shade-settings .field{width:100%}.shade-settings button{width:100%}
+    h2{font-size:16px}.formula{font-size:15px}
+  }
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="heading">
+    <div><h1>PV Maximum Power Point Tracking — IncCond &amp; P&amp;O</h1><p>Interactive I–V / P–V curves · Buck–boost PWM · Partial shading · Step-by-step MPPT</p></div>
+    <div class="header-right"><div class="byline">Ibrahim Abuishmais, PhD</div><button type="button" id="theme" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark mode">☾ Dark mode</button></div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="controls" aria-label="Simulation controls">
+    <div class="button-group">
+      <button type="button" class="primary" id="run">▶ Run MPPT</button>
+      <button type="button" id="step">Step once</button>
+      <button type="button" id="reset">Reset</button>
+      <button type="button" id="change">☁ Irradiance step</button>
+    </div>
+    <label class="field wide">MPPT algorithm
+      <select id="mode"><option value="inccond">Incremental Conductance</option><option value="po">Perturb &amp; Observe (P&amp;O)</option><option value="manual">Manual duty cycle</option></select>
+    </label>
+    <label class="field wide">PV condition
+      <select id="condition"><option value="uniform">Uniform irradiance (one MPP)</option><option value="shaded">Partial shading (two MPPs)</option></select>
+    </label>
+    <label class="field">Duty cycle D <output class="field-value" id="dlabel">55.0%</output><input id="duty" type="range" min="10" max="90" step="0.2" value="55"></label>
+    <label class="field">Irradiance <output class="field-value" id="glabel">1000 W/m²</output><input id="g" type="range" min="200" max="1200" step="25" value="1000"></label>
+    <label class="field">Cell temperature <output class="field-value" id="tlabel">25 °C</output><input id="temp" type="range" min="0" max="70" step="1" value="25"></label>
+    <label class="field">Duty step <output class="field-value" id="slabel">0.50%</output><input id="delta" type="range" min="0.1" max="3" step="0.1" value="0.5"></label>
+    <label class="field">Speed <output class="field-value" id="speedlabel">2 steps/s</output><input id="speed" type="range" min="1" max="10" step="1" value="2"></label>
+    <div id="shade-settings" class="shade-settings" hidden>
+      <label class="field">Shaded section irradiance <output class="field-value" id="shade-label">40% of main</output><input id="shade" type="range" min="20" max="70" step="5" value="40"></label>
+      <button type="button" class="secondary" id="start-local">Start near local peak</button>
+      <button type="button" class="secondary" id="start-global">Start near global peak</button>
+      <div class="shade-tip">Two series-connected PV sections, one shaded and bypass-diode protected. The P–V curve has separate local and global peaks; standard IncCond and P&amp;O do not guarantee global tracking.</div>
+    </div>
+  </section>
+
+  <section class="metrics" aria-label="PV performance readings">
+    <div class="metric"><span>PV voltage</span><b id="voltage">—</b></div>
+    <div class="metric"><span>PV current</span><b id="current">—</b></div>
+    <div class="metric"><span>PV power</span><b id="power">—</b></div>
+    <div class="metric"><span>Available global maximum</span><b id="maxpower">—</b></div>
+    <div class="metric"><span>Global MPPT efficiency</span><b id="efficiency">—</b></div>
+  </section>
+
+  <div class="grid-layout">
+    <section class="panel" aria-labelledby="iv-title">
+      <h2 id="iv-title">I–V curve and operating point</h2>
+      <canvas class="chart" id="iv" role="img" aria-label="Photovoltaic current-voltage characteristic, maximum power point markers and operating point"></canvas>
+      <div class="legend"><span class="legend-item"><i class="swatch curve"></i>I–V characteristic</span><span class="legend-item"><i class="swatch global"></i>Global MPP</span><span class="legend-item" id="iv-local-legend" hidden><i class="swatch local"></i>Local MPP</span><span class="legend-item"><i class="swatch operating"></i>Operating point</span></div>
+      <div id="peak-summary" class="peak-summary" aria-live="polite"></div>
+    </section>
+    <section class="panel" aria-labelledby="pv-title">
+      <h2 id="pv-title">P–V curve and MPPT tracking history</h2>
+      <canvas class="chart" id="pv" role="img" aria-label="Photovoltaic power-voltage characteristic, global and local maxima and tracking history"></canvas>
+      <div class="legend"><span class="legend-item"><i class="swatch curve"></i>P–V characteristic</span><span class="legend-item"><i class="swatch global"></i>Global MPP</span><span class="legend-item" id="pv-local-legend" hidden><i class="swatch local"></i>Local MPP</span><span class="legend-item"><i class="swatch operating"></i>Operating point / history</span></div>
+      <p class="foot">The green global-MPP marker is a teaching reference calculated from the whole curve; neither conventional algorithm receives it as a control input.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="decision-title">
+      <h2 id="decision-title">Incremental Conductance decision</h2>
+      <div class="info" id="logic" aria-live="polite">Initializing…</div>
+      <p class="formula" id="algorithm-formula">At MPP: dP/dV = I + V(dI/dV) = 0 &nbsp; ⇒ &nbsp; dI/dV = −I/V</p>
+      <p id="conductance"></p>
+      <p class="foot" id="algorithm-explanation"></p>
+      <div class="history-head"><h3>Last 10 MPPT iterations</h3><span>Newest first · measurements before the action</span></div>
+      <div class="table-scroll">
+        <table aria-label="Last ten MPPT iterations"><thead><tr><th>#</th><th>Mode</th><th>V (V)</th><th>P (W)</th><th>ΔP (W)</th><th>D before → after</th><th>Action</th></tr></thead><tbody id="history-body"><tr><td class="empty-row" colspan="7">No iterations yet. Press Step once or Run MPPT.</td></tr></tbody></table>
+      </div>
+      <p class="foot">D is adjusted only after sampling V and I. “D ↓” means PV voltage rises; “D ↑” means PV voltage falls.</p>
+    </section>
+    <section class="panel" aria-labelledby="converter-title">
+      <h2 id="converter-title">Animated PWM and buck–boost conversion</h2>
+      <canvas class="chart" id="pwm" role="img" aria-label="PWM switching waveforms with variable duty cycle"></canvas>
+      <p class="formula">|V<sub>batt</sub>| = [D / (1 − D)] V<sub>PV</sub> &nbsp;·&nbsp; I<sub>batt</sub> = P<sub>PV</sub> / V<sub>batt</sub></p>
+      <div class="battery-readings"><div><small>Battery/load voltage (magnitude)</small><strong id="battery-voltage">24.00 V</strong></div><div><small>Battery charging current</small><strong id="battery-current">—</strong></div><div><small>Battery charging power</small><strong id="battery-power">—</strong></div></div>
+      <p id="converter"></p>
+      <p class="foot">Ideal inverting buck–boost converter operating in continuous conduction, feeding a fixed 24 V battery (constant-voltage approximation). The output is the voltage magnitude; its actual polarity is negative. Losses, switching transients and battery SoC dynamics are excluded.</p>
+    </section>
+  </div>
+  <p class="fineprint">Educational quasi-static model, not a detailed switching or electrochemical simulation. Uniform mode uses an approximate PV I–V characteristic. Partial-shading mode represents two series PV sections with ideal bypass action on the weaker section; it intentionally produces two power maxima. Graphs and controls are available offline in this single HTML file.</p>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const num = id => Number($(id).value);
+  const pretty = (x, places=2) => Number.isFinite(x) ? x.toFixed(places) : '—';
+  const BATT_V = 24;
+  const state = {
+    D: .55, running:false, prev:null, trace:[], rows:[], iteration:0,
+    dv:0,di:0,dp:0, decision:'Ready — press Run MPPT or Step once',
+    pwmPhase:0,lastFrame:0,stepClock:0,model:null,readings:null
+  };
+
+  function pvParameters() {
+    const g = num('g'), t = num('temp');
+    return {
+      isc: Math.max(.1, 8*(g/1000)*(1+.0005*(t-25))),
+      voc: Math.max(5, 42*(1-.0032*(t-25))*(1+.035*Math.log(g/1000))),
+      partial: $('condition').value === 'shaded',
+      shade: num('shade')/100
+    };
+  }
+
+  // Series PV sections with independent photocurrents and ideal bypass protection.
+  // Each substring's approximate relation is I = Isc * [1-(V/Voc)^11].
+  // Invert each I–V expression, then sum the section voltages at the same current.
+  // For current above a shaded substring's Isc, its bypass diode is idealized as 0 V.
+  function voltageAtCurrent(i, p) {
+    function vSection(current, isc, voc) {
+      return current >= isc ? 0 : voc*Math.pow(Math.max(0,1-current/isc),1/11);
+    }
+    return p.partial
+      ? vSection(i, p.isc, p.voc/2) + vSection(i, p.isc*p.shade, p.voc/2)
+      : vSection(i, p.isc, p.voc);
+  }
+
+  // Monotone inversion V(I) -> I(V) by bisection. Handles the bypassed branch.
+  function currentAtVoltage(v,p) {
+    if(v <= 0) return p.isc;
+    if(v >= p.voc) return 0;
+    let lo=0,hi=p.isc;
+    for(let k=0;k<27;k++) {
+      const mid=(lo+hi)/2;
+      if(voltageAtCurrent(mid,p)>v) lo=mid;
+      else hi=mid;
+    }
+    return (lo+hi)/2;
+  }
+  function pointAt(v,p) {
+    const voltage=clamp(v,0,p.voc),i=currentAtVoltage(voltage,p);
+    return {v:voltage,i,p:voltage*i};
+  }
+
+  function buildModel() {
+    const p=pvParameters(),points=[];
+    const steps=1800;
+    for(let k=0;k<=steps;k++) points.push(pointAt(p.voc*k/steps,p));
+    const maxima=[];
+    for(let k=1;k<steps;k++) {
+      if(points[k].p >= points[k-1].p && points[k].p > points[k+1].p)
+        maxima.push(points[k]);
+    }
+    maxima.sort((a,b)=>b.p-a.p);
+    const global=maxima[0] || points.reduce((a,b)=>b.p>a.p?b:a);
+    // In the shaded case one lower peak remains alongside the global maximum.
+    const local=p.partial ? maxima.find(x=>Math.abs(x.v-global.v)>3) || null : null;
+    state.model={p,points,global,local};
+  }
+
+  function sample() {
+    if(!state.model) buildModel();
+    const vIdeal=BATT_V*(1-state.D)/state.D;
+    const pt=pointAt(vIdeal,state.model.p);
+    return {pt,model:state.model};
+  }
+  function saveTrace() {
+    const {pt}=sample();
+    state.trace.push({v:pt.v,p:pt.p});
+    if(state.trace.length>90)state.trace.shift();
+  }
+  function refreshEnvironment(message='Environment changed — take two fresh PV samples') {
+    buildModel();state.prev=null;state.dv=state.di=state.dp=0;
+    state.decision=message;state.trace=[];saveTrace();render();
+  }
+
+  function mpptStep() {
+    if($('mode').value==='manual') {
+      $('mode').value='inccond';state.prev=null;
+    }
+    const mode=$('mode').value;
+    const {pt}=sample();
+    const oldD=state.D,step=num('delta')/100;
+    let dir=0,action='Hold',decision='';
+    const eps=1e-5;
+    if(state.prev===null) {
+      // First move provides the voltage perturbation needed by either algorithm.
+      dir=-1;
+      state.dv=state.di=state.dp=0;
+      decision='Initial perturbation: lower PV voltage (increase D) to obtain a second sample';
+    } else {
+      state.dv=pt.v-state.prev.v;
+      state.di=pt.i-state.prev.i;
+      state.dp=pt.p-state.prev.p;
+      if(mode==='po') {
+        // Standard P&O from measured signs only; no access to the true MPP location.
+        if(Math.abs(state.dv)<eps) {
+          decision='P&O: ΔV ≈ 0 → wait for a measurable voltage change';
+        } else if(Math.abs(state.dp)<.02) {
+          decision='P&O: ΔP ≈ 0 → hold duty cycle';
+        } else {
+          dir=(state.dp/state.dv)>0 ? 1 : -1;
+          decision='P&O: ΔP = '+pretty(state.dp)+' W and ΔV = '+pretty(state.dv)+' V → '+(dir>0?'increase PV voltage':'decrease PV voltage');
+        }
+      } else {
+        if(Math.abs(state.dv)<eps) {
+          if(Math.abs(state.di)<eps) decision='IncCond: ΔV ≈ 0 and ΔI ≈ 0 → hold D';
+          else {
+            dir=state.di>0?1:-1;
+            decision='IncCond: ΔV ≈ 0, ΔI '+(state.di>0?'>':'<')+' 0 → '+(dir>0?'increase':'decrease')+' PV voltage';
+          }
+        } else {
+          const slope=state.di/state.dv,target=-pt.i/Math.max(pt.v,eps);
+          const error=slope-target;
+          if(Math.abs(error)<.006) decision='IncCond: ΔI/ΔV ≈ −I/V → hold D';
+          else {
+            dir=error>0?1:-1;
+            decision='IncCond: ΔI/ΔV '+(error>0?'>':'<')+' −I/V → '+(dir>0?'increase':'decrease')+' PV voltage';
+          }
+        }
+      }
+    }
+    state.prev={v:pt.v,i:pt.i,p:pt.p};
+    // Buck–boost: moving PV voltage upward requires reducing D.
+    state.D=clamp(state.D-dir*step,.10,.90);
+    if(state.D<oldD-1e-9) action='D ↓';
+    if(state.D>oldD+1e-9) action='D ↑';
+    if(Math.abs(state.D-oldD)<1e-9 && dir) decision += ' (duty limit reached)';
+    state.iteration++;
+    state.decision=decision;
+    state.rows.unshift({
+      n:state.iteration,mode:mode==='po'?'P&O':'IncCond',
+      v:pt.v,p:pt.p,dp:state.dp,
+      oldD,newD:state.D,action
+    });
+    if(state.rows.length>10)state.rows.length=10;
+    saveTrace();render();
+  }
+  function reset() {
+    state.running=false;state.D=.55;state.prev=null;state.trace=[];state.rows=[];
+    state.iteration=0;state.dv=state.di=state.dp=0;
+    state.decision='Ready — press Run MPPT or Step once';
+    state.stepClock=0;
+    buildModel();saveTrace();render();
+  }
+
+  // Drawing works at phone and desktop resolutions, including high-DPI displays.
+  function prepareCanvas(id) {
+    const canvas=$(id),r=canvas.getBoundingClientRect();
+    const scale=Math.min(3,window.devicePixelRatio||1);
+    const w=Math.max(180,r.width),h=Math.max(120,r.height);
+    const width=Math.round(w*scale),height=Math.round(h*scale);
+    if(canvas.width!==width || canvas.height!==height) {canvas.width=width;canvas.height=height;}
+    const ctx=canvas.getContext('2d');
+    ctx.setTransform(scale,0,0,scale,0,0);
+    return {ctx,w,h};
+  }
+  function colors() {
+    const s=getComputedStyle(document.documentElement);
+    const varC=n=>s.getPropertyValue(n).trim();
+    return {text:varC('--text'),muted:varC('--muted'),axis:varC('--axis'),grid:varC('--grid'),primary:varC('--primary'),global:varC('--global'),local:varC('--local'),accent:varC('--accent'),trace:varC('--trace'),background:varC('--chart')};
+  }
+  function drawAxes(ctx,w,h,maxX,maxY,xLab,yLab,c) {
+    const left=w<400?47:57,right=w<400?12:22,top=24,bottom=43;
+    const ww=w-left-right,hh=h-top-bottom;
+    const X=v=>left+v/maxX*ww,Y=v=>h-bottom-v/maxY*hh;
+    const tickCount=w<350?4:5;
+    ctx.lineWidth=1;ctx.font='11px system-ui,Arial';ctx.textAlign='center';
+    for(let j=0;j<=tickCount;j++) {
+      const x=left+j*ww/tickCount,y=h-bottom-j*hh/tickCount;
+      ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,h-bottom);
+      ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.strokeStyle=c.grid;ctx.stroke();
+      ctx.fillStyle=c.muted;
+      ctx.fillText((maxX*j/tickCount).toFixed(0),x,h-bottom+17);
+      ctx.textAlign='right';ctx.fillText((maxY*j/tickCount).toFixed(0),left-7,y+4);
+      ctx.textAlign='center';
+    }
+    ctx.beginPath();ctx.moveTo(left,top);ctx.lineTo(left,h-bottom);ctx.lineTo(w-right,h-bottom);
+    ctx.strokeStyle=c.axis;ctx.stroke();ctx.fillStyle=c.text;
+    ctx.fillText(xLab,left+ww/2,h-7);
+    ctx.save();ctx.translate(13,top+hh/2);ctx.rotate(-Math.PI/2);ctx.fillText(yLab,0,0);ctx.restore();
+    return {X,Y,bottom:h-bottom,left,right};
+  }
+  function dot(ctx,ax,q,type,color,r,label,c,w) {
+    const x=ax.X(q.v),y=ax.Y(type==='iv'?q.i:q.p);
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    ctx.strokeStyle=c.background;ctx.lineWidth=2;ctx.stroke();
+    if(label) {
+      ctx.font='700 11px system-ui,Arial';ctx.fillStyle=color;
+      const tx=x>(w-80)?x-8:x+9;
+      ctx.textAlign=x>(w-80)?'right':'left';
+      ctx.fillText(label,tx,Math.max(14,y-10));
+    }
+  }
+  function chart(id,type,s,c) {
+    const {ctx,w,h}=prepareCanvas(id),{p,points,global,local}=s.model,pt=s.pt;
+    ctx.clearRect(0,0,w,h);
+    const maxX=p.voc*1.06,maxY=(type==='iv'?p.isc:global.p)*1.20;
+    const a=drawAxes(ctx,w,h,maxX,maxY,'Voltage (V)',type==='iv'?'Current (A)':'Power (W)',c);
+    ctx.beginPath();
+    points.forEach((q,k)=>{const x=a.X(q.v),y=a.Y(type==='iv'?q.i:q.p);if(!k)ctx.moveTo(x,y);else ctx.lineTo(x,y)});
+    ctx.strokeStyle=c.primary;ctx.lineWidth=2.8;ctx.stroke();
+    if(type==='pv') {
+      state.trace.forEach(q=>{ctx.beginPath();ctx.arc(a.X(q.v),a.Y(q.p),2.8,0,Math.PI*2);ctx.fillStyle=c.trace;ctx.fill()});
+    }
+    ctx.setLineDash([5,5]);ctx.strokeStyle=c.accent;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(a.X(pt.v),a.Y(type==='iv'?pt.i:pt.p));ctx.lineTo(a.X(pt.v),a.bottom);ctx.stroke();ctx.setLineDash([]);
+    dot(ctx,a,global,type,c.global,7,'GMPP',c,w);
+    if(local) dot(ctx,a,local,type,c.local,6,'LMPP',c,w);
+    dot(ctx,a,pt,type,c.accent,7,'',c,w);
+  }
+  function drawPWM(c) {
+    const {ctx,w,h}=prepareCanvas('pwm');ctx.clearRect(0,0,w,h);
+    const l=35,r=15,top=46,bottom=h-47,span=w-l-r,period=span/3,D=state.D;
+    ctx.beginPath();ctx.moveTo(l,top-13);ctx.lineTo(l,bottom+10);ctx.lineTo(w-r,bottom+10);
+    ctx.strokeStyle=c.axis;ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.strokeStyle=c.primary;ctx.lineWidth=3;
+    for(let j=0;j<3;j++){
+      const x=l+j*period,on=x+D*period;
+      ctx.moveTo(x,bottom);ctx.lineTo(x,top);ctx.lineTo(on,top);ctx.lineTo(on,bottom);ctx.lineTo(x+period,bottom);
+    }ctx.stroke();
+    ctx.font='700 13px system-ui,Arial';ctx.fillStyle=c.text;
+    ctx.fillText('D = '+pretty(100*D,1)+'%',l+2,21);
+    if(period>80){ctx.font='11px system-ui,Arial';ctx.fillText('ON',l+period*D/2-10,top-8);ctx.fillText('OFF',l+period*(D+(1-D)/2)-12,bottom+27)}
+    ctx.beginPath();ctx.strokeStyle=c.accent;ctx.lineWidth=2;
+    const cursor=l+state.pwmPhase*span;
+    ctx.moveTo(cursor,top-12);ctx.lineTo(cursor,bottom+11);ctx.stroke();
+  }
+  function renderRows() {
+    const body=$('history-body');
+    if(!state.rows.length){body.innerHTML='<tr><td class="empty-row" colspan="7">No iterations yet. Press Step once or Run MPPT.</td></tr>';return;}
+    body.innerHTML=state.rows.map(r=>{
+      const actionClass=r.action==='D ↓'?'action-down':r.action==='D ↑'?'action-up':'action-hold';
+      return '<tr><td>'+r.n+'</td><td>'+r.mode+'</td><td>'+pretty(r.v)+'</td><td>'+pretty(r.p,1)+'</td><td>'+pretty(r.dp,2)+'</td><td>'+pretty(r.oldD*100,1)+'% → '+pretty(r.newD*100,1)+'%</td><td class="'+actionClass+'">'+r.action+'</td></tr>';
+    }).join('');
+  }
+  function render() {
+    const s=sample(),pt=s.pt,model=s.model,global=model.global,local=model.local;
+    const c=colors(),mode=$('mode').value,shade=model.p.partial;
+    state.readings=s;
+    $('duty').value=pretty(state.D*100,1);
+    $('dlabel').textContent=pretty(state.D*100,1)+'%';
+    $('glabel').textContent=num('g')+' W/m²';
+    $('tlabel').textContent=num('temp')+' °C';
+    $('slabel').textContent=pretty(num('delta'),2)+'%';
+    $('speedlabel').textContent=num('speed')+' steps/s';
+    $('shade-label').textContent=num('shade')+'% of main';
+    $('shade-settings').hidden=!shade;
+    $('iv-local-legend').hidden=!local;$('pv-local-legend').hidden=!local;
+    $('voltage').textContent=pretty(pt.v)+' V';
+    $('current').textContent=pretty(pt.i)+' A';
+    $('power').textContent=pretty(pt.p,1)+' W';
+    $('maxpower').textContent=pretty(global.p,1)+' W';
+    $('efficiency').textContent=global.p>0?pretty(100*pt.p/global.p,1)+'%':'—';
+    $('battery-voltage').textContent=pretty(BATT_V)+' V';
+    $('battery-current').textContent=pretty(pt.p/BATT_V)+' A';
+    $('battery-power').textContent=pretty(pt.p,1)+' W';
+    $('peak-summary').innerHTML=local
+      ? '<strong>Global MPP:</strong> '+pretty(global.v)+' V, '+pretty(global.p,1)+' W &nbsp; · &nbsp; <span class="secondary-peak">Local MPP:</span> '+pretty(local.v)+' V, '+pretty(local.p,1)+' W'
+      : '<strong>Maximum power point:</strong> '+pretty(global.v)+' V, '+pretty(global.p,1)+' W';
+    let position;
+    if(local && Math.abs(pt.v-local.v)<1.3 && pt.p>local.p*.965)
+      position='<span class="warning">Near LOCAL maximum</span> (below global peak)';
+    else if(Math.abs(pt.v-global.v)<1.3 && pt.p>global.p*.965)
+      position='<span class="status">Near GLOBAL maximum</span>';
+    else if(shade) position='<span class="status">Operating between or outside the two peaks</span>';
+    else position='<span class="status">'+(pt.v<global.v?'Left of MPP':'Right of MPP')+'</span>';
+    $('logic').innerHTML=position+' · Iteration '+state.iteration+'<br>'+state.decision+
+      '<br>Present V<sub>PV</sub> = '+pretty(pt.v)+' V; global V<sub>MPP</sub> = '+pretty(global.v)+' V'+
+      (local?'; local V<sub>MPP</sub> = '+pretty(local.v)+' V':'');
+    if(mode==='po') {
+      $('decision-title').textContent='Perturb & Observe (P&O) decision';
+      $('algorithm-formula').innerHTML='P&amp;O: ΔP = P(k) − P(k−1); &nbsp; ΔV = V(k) − V(k−1)';
+      $('conductance').innerHTML='Measured ΔP = <b>'+pretty(state.dp)+'</b> W; ΔV = <b>'+pretty(state.dv)+'</b> V.';
+      $('algorithm-explanation').innerHTML='If ΔP/ΔV &gt; 0: increase PV voltage → decrease D. If ΔP/ΔV &lt; 0: decrease PV voltage → increase D. P&amp;O may oscillate around whichever peak it reaches.';
+    } else {
+      $('decision-title').textContent=mode==='manual'?'Manual duty-cycle control':'Incremental Conductance decision';
+      $('algorithm-formula').innerHTML='At a stationary point: dP/dV = I + V(dI/dV) = 0 &nbsp; ⇒ &nbsp; dI/dV = −I/V';
+      $('conductance').innerHTML='−I/V = <b>'+pretty(-pt.i/Math.max(pt.v,1e-5),4)+'</b> A/V; measured ΔI/ΔV = <b>'+
+        (Math.abs(state.dv)>1e-5?pretty(state.di/state.dv,4):'undefined (ΔV ≈ 0)')+'</b> A/V.';
+      $('algorithm-explanation').innerHTML='For a single-peaked curve: dI/dV &gt; −I/V → increase PV voltage → decrease D; dI/dV &lt; −I/V → decrease PV voltage → increase D.'+
+        (shade?' With two peaks, this comparison indicates a local slope, not the global maximum.':'');
+    }
+    const vIdeal=BATT_V*(1-state.D)/state.D;
+    $('converter').innerHTML='Duty ratio D/(1−D) = <b>'+pretty(state.D/(1-state.D),3)+'</b>; ideal V<sub>PV</sub> = 24(1−D)/D = <b>'+pretty(vIdeal)+' V</b>'+
+      (vIdeal>model.p.voc?' (limited to PV open-circuit voltage '+pretty(model.p.voc)+' V)':'')+'. Battery current = <b>'+pretty(pt.p/BATT_V)+' A</b> (ideal power balance).';
+    $('run').textContent=state.running?'Ⅱ Pause':'▶ Run MPPT';
+    renderRows();chart('iv','iv',s,c);chart('pv','pv',s,c);drawPWM(c);
+  }
+  function switchTheme() {
+    const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    $('theme').textContent=next==='dark'?'☀ Light mode':'☾ Dark mode';
+    $('theme').setAttribute('aria-label','Switch to '+(next==='dark'?'light':'dark')+' mode');
+    $('theme').setAttribute('aria-pressed',String(next==='dark'));
+    try{localStorage.setItem('mppt-teaching-theme',next)}catch(e){}
+    render();
+  }
+  function moveToPeak(which) {
+    const m=state.model;
+    if(!m)return;
+    const peak=which==='local'?m.local:m.global;
+    if(!peak)return;
+    state.running=false;state.prev=null;state.dv=state.di=state.dp=0;
+    // Offset from the exact peak to make the first MPPT steps visually clear.
+    const target=clamp(peak.v+2.0,2,m.p.voc-1);
+    state.D=clamp(BATT_V/(BATT_V+target),.10,.90);
+    state.decision='Preset near '+which+' peak — press Run or Step once to track';
+    state.trace=[];saveTrace();render();
+  }
+  function onManual() {
+    state.running=false;$('mode').value='manual';state.D=num('duty')/100;
+    state.prev=null;state.decision='Manual duty-cycle adjustment';
+    saveTrace();render();
+  }
+
+  $('run').addEventListener('click',()=>{
+    if($('mode').value==='manual') {$('mode').value='inccond';state.prev=null;}
+    state.running=!state.running;state.stepClock=0;render();
+  });
+  $('step').addEventListener('click',()=>{state.running=false;mpptStep();});
+  $('reset').addEventListener('click',reset);
+  $('change').addEventListener('click',()=>{
+    $('g').value=num('g')>600?400:1000;
+    refreshEnvironment('Irradiance stepped — collect two new PV samples');
+  });
+  $('mode').addEventListener('change',()=>{
+    state.running=false;state.prev=null;state.dv=state.di=state.dp=0;
+    state.decision='Algorithm changed — new reference sample needed';render();
+  });
+  $('condition').addEventListener('change',()=>{
+    state.running=false;
+    refreshEnvironment($('condition').value==='shaded'?'Partial shading enabled — examine the two P–V peaks':'Uniform irradiance restored — one P–V peak');
+  });
+  $('shade').addEventListener('input',()=>refreshEnvironment('Shaded-section irradiance changed — global/local peaks recalculated'));
+  $('duty').addEventListener('input',onManual);
+  ['g','temp'].forEach(id=>$(id).addEventListener('input',()=>refreshEnvironment('Irradiance / temperature changed — reacquire two samples')));
+  ['delta','speed'].forEach(id=>$(id).addEventListener('input',render));
+  $('start-local').addEventListener('click',()=>moveToPeak('local'));
+  $('start-global').addEventListener('click',()=>moveToPeak('global'));
+  $('theme').addEventListener('click',switchTheme);
+
+  function animate(now) {
+    if(!state.lastFrame)state.lastFrame=now;
+    const dt=Math.min(.10,(now-state.lastFrame)/1000);state.lastFrame=now;
+    const reduceMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!reduceMotion) state.pwmPhase=(state.pwmPhase+dt*.55)%1;
+    if(state.running && $('mode').value!=='manual'){
+      state.stepClock+=dt;
+      if(state.stepClock>=1/num('speed')){state.stepClock=0;mpptStep();}
+    }
+    drawPWM(colors());requestAnimationFrame(animate);
+  }
+  try {
+    const stored=localStorage.getItem('mppt-teaching-theme');
+    const dark=stored==='dark'||(!stored&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+    if(dark){document.documentElement.setAttribute('data-theme','dark');$('theme').textContent='☀ Light mode';$('theme').setAttribute('aria-pressed','true');$('theme').setAttribute('aria-label','Switch to light mode')}
+  }catch(e){}
+  reset();
+  if(window.ResizeObserver){new ResizeObserver(()=>render()).observe(document.querySelector('.grid-layout'));}
+  window.addEventListener('resize',()=>render());
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
